@@ -142,6 +142,10 @@ export function useTrading() {
           totalCostWei: totalCostWei.toString(),
         });
 
+        // Debug: Log current time vs market times
+        const currentTime = Math.floor(Date.now() / 1000);
+        console.log("Current timestamp:", currentTime);
+
         const wDAGAddress = CONTRACT_ADDRESSES.wDAG;
         const wDAGAbi = ABI.wDAG;
 
@@ -169,13 +173,13 @@ export function useTrading() {
         // Step 3: Convert BDAG to wDAG only if needed
         if ((wDAGBalance as bigint) < totalCostWei) {
           const neededAmount = totalCostWei - (wDAGBalance as bigint);
-          const bDAGBalance = bDAGBalance?.value || BigInt(0);
+          const currentBDAGBalance = bDAGBalance?.value || BigInt(0);
           
-          if (bDAGBalance < neededAmount) {
+          if (currentBDAGBalance < neededAmount) {
             throw new Error(
               `Insufficient BDAG balance. Need ${formatPrice(
                 Number(neededAmount) / 1e18
-              )} BDAG to convert to wDAG but have ${formatPrice(Number(bDAGBalance) / 1e18)}`
+              )} BDAG to convert to wDAG but have ${formatPrice(Number(currentBDAGBalance) / 1e18)}`
             );
           }
 
@@ -215,38 +219,93 @@ export function useTrading() {
 
         toast.info("Executing trade...");
 
-        // Step 5: Execute the buy transaction (no value needed, uses transferFrom)
+        // Step 5: Check market state before trading
+        const marketState = await readContract(config, {
+          address: market.address as `0x${string}`,
+          abi: MARKET_ABIS.binaryMarket,
+          functionName: "state",
+        });
+
+        if (marketState !== 0) {
+          throw new Error(`Market is not open. Current state: ${marketState}`);
+        }
+
+        // Check if market has started
+        const startTime = await readContract(config, {
+          address: market.address as `0x${string}`,
+          abi: MARKET_ABIS.binaryMarket,
+          functionName: "startTime",
+        });
+
+        // Check if market has ended
+        const endTime = await readContract(config, {
+          address: market.address as `0x${string}`,
+          abi: MARKET_ABIS.binaryMarket,
+          functionName: "endTime",
+        });
+
+        console.log("Market start time:", Number(startTime));
+        console.log("Market end time:", Number(endTime));
+        console.log("Current time:", currentTime);
+        console.log("Market started:", currentTime >= Number(startTime));
+        console.log("Market ended:", currentTime >= Number(endTime));
+
+        if (BigInt(currentTime) < (startTime as bigint)) {
+          throw new Error(`Market has not started yet. Starts at: ${new Date(Number(startTime) * 1000).toLocaleString()}`);
+        }
+
+        if (BigInt(currentTime) >= (endTime as bigint)) {
+          throw new Error(`Market trading period has ended. Ended at: ${new Date(Number(endTime) * 1000).toLocaleString()}`);
+        }
+
+        // Step 6: Execute the buy transaction (no value needed, uses transferFrom)
         let txHash: `0x${string}`;
 
-        if (market.type === "binary") {
-          // Binary market: buy(bool isYes, uint256 shares)
-          txHash = await writeContractAsync({
-            address: market.address as `0x${string}`,
-            abi: MARKET_ABIS.binaryMarket,
-            functionName: "buy",
-            args: [outcomeIndex === 0, BigInt(Math.floor(sharesNumber * 1e18))],
-            // No value - uses transferFrom
-          });
-        } else if (market.type === "multi") {
-          // Multi market: buy(uint256 outcome, uint256 shares)
-          txHash = await writeContractAsync({
-            address: market.address as `0x${string}`,
-            abi: MARKET_ABIS.multiMarket,
-            functionName: "buy",
-            args: [outcomeIndex, BigInt(Math.floor(sharesNumber * 1e18))],
-            // No value - uses transferFrom
-          });
-        } else if (market.type === "scalar") {
-          // Scalar market: buy(bool isLong, uint256 shares)
-          txHash = await writeContractAsync({
-            address: market.address as `0x${string}`,
-            abi: MARKET_ABIS.scalarMarket,
-            functionName: "buy",
-            args: [outcomeIndex === 0, BigInt(Math.floor(sharesNumber * 1e18))],
-            // No value - uses transferFrom
-          });
-        } else {
-          throw new Error("Unsupported market type");
+        try {
+          if (market.type === "binary") {
+            // Binary market: buy(bool isYes, uint256 shares)
+            console.log("Calling buy with args:", [outcomeIndex === 0, BigInt(Math.floor(sharesNumber * 1e18))]);
+            txHash = await writeContractAsync({
+              address: market.address as `0x${string}`,
+              abi: MARKET_ABIS.binaryMarket,
+              functionName: "buy",
+              args: [outcomeIndex === 0, BigInt(Math.floor(sharesNumber * 1e18))],
+              // No value - uses transferFrom
+            });
+          } else if (market.type === "multi") {
+            // Multi market: buy(uint256 outcome, uint256 shares)
+            console.log("Calling buy with args:", [outcomeIndex, BigInt(Math.floor(sharesNumber * 1e18))]);
+            txHash = await writeContractAsync({
+              address: market.address as `0x${string}`,
+              abi: MARKET_ABIS.multiMarket,
+              functionName: "buy",
+              args: [outcomeIndex, BigInt(Math.floor(sharesNumber * 1e18))],
+              // No value - uses transferFrom
+            });
+          } else if (market.type === "scalar") {
+            // Scalar market: buy(bool isLong, uint256 shares)
+            console.log("Calling buy with args:", [outcomeIndex === 0, BigInt(Math.floor(sharesNumber * 1e18))]);
+            txHash = await writeContractAsync({
+              address: market.address as `0x${string}`,
+              abi: MARKET_ABIS.scalarMarket,
+              functionName: "buy",
+              args: [outcomeIndex === 0, BigInt(Math.floor(sharesNumber * 1e18))],
+              // No value - uses transferFrom
+            });
+          } else {
+            throw new Error("Unsupported market type");
+          }
+        } catch (buyError) {
+          console.error("Buy transaction failed:", buyError);
+          
+          // Try to provide more specific error information
+          if (buyError instanceof Error) {
+            if (buyError.message.includes("execution reverted")) {
+              throw new Error(`Transaction reverted. Possible causes: Market not open, trading period ended, insufficient balance, or invalid parameters. Original error: ${buyError.message}`);
+            }
+            throw new Error(`Buy transaction failed: ${buyError.message}`);
+          }
+          throw buyError;
         }
 
         console.log("Trade transaction submitted:", txHash);
