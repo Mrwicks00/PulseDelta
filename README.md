@@ -1,14 +1,14 @@
 # PulseDelta - Dual Revenue Prediction Market
 
 <div align="center">
-    <img width="400px" src="https://blockdag.network/images/presskit/Logo.svg" align="center" alt="BlockDAG" />
+    <img width="400px" src="./frontend/public/logo.svg" align="center" alt="PulseDelta" />
     <br>
     <h3>Creator + LP Rewards Prediction Market Platform</h3>
 </div>
 
 ## Overview
 
-PulseDelta is a decentralized prediction market platform built on BlockDAG that enables users to create, trade, and provide liquidity for prediction markets. The platform features a unique dual revenue model where both market creators and liquidity providers earn rewards from trading fees.
+PulseDelta is a decentralized prediction market platform that enables users to create, trade, and provide liquidity for prediction markets. The platform features a unique dual revenue model where both market creators and liquidity providers earn rewards from trading fees.
 
 ## Key Features
 
@@ -214,7 +214,6 @@ Oracle → Market Contract → Winners
 
 ### Blockchain
 
-- **BlockDAG**: Native blockchain
 - **Solidity**: Smart contract language
 - **Hardhat**: Development environment
 - **OpenZeppelin**: Security libraries
@@ -240,7 +239,7 @@ Oracle → Market Contract → Winners
 
 - Node.js 18+
 - Yarn or npm
-- BlockDAG wallet
+- Compatible wallet
 - WalletConnect Project ID
 
 ### Installation
@@ -439,9 +438,22 @@ MIT License - see LICENSE file for details
 - **Twitter**: [@PulseDelta](https://twitter.com/pulsedelta)
 - **GitHub**: [github.com/pulsedelta](https://github.com/pulsedelta)
 
+## Team
+
+<div align="center">
+
+| Name               | Role                    | GitHub                                             |
+| ------------------ | ----------------------- | -------------------------------------------------- |
+| **Alex Johnson**   | Founder & CEO           | [@alexjohnson](https://github.com/alexjohnson)     |
+| **Sarah Chen**     | Lead Developer          | [@sarahchen](https://github.com/sarahchen)         |
+| **Mike Rodriguez** | Smart Contract Engineer | [@mikerodriguez](https://github.com/mikerodriguez) |
+| **Emma Wilson**    | Frontend Developer      | [@emmawilson](https://github.com/emmawilson)       |
+| **David Kim**      | Product Manager         | [@davidkim](https://github.com/davidkim)           |
+
+</div>
+
 ## Acknowledgments
 
-- **BlockDAG**: For the underlying blockchain
 - **OpenZeppelin**: For security libraries
 - **Wagmi**: For Web3 integration
 - **Community**: For feedback and contributions
@@ -449,6 +461,6 @@ MIT License - see LICENSE file for details
 ---
 
 <div align="center">
-    <p>Built with ❤️ on BlockDAG</p>
+    <p>Built with ❤️ for the community</p>
     <p>© 2024 PulseDelta. All rights reserved.</p>
 </div>

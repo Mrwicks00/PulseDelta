@@ -1,0 +1,20 @@
+<svg width="400" height="120" viewBox="0 0 400 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="400" height="120" rx="20" fill="#1a1a1a"/>
+  
+  <!-- PulseDelta Text -->
+  <text x="200" y="50" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="32" font-weight="bold">
+    PulseDelta
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="200" y="80" text-anchor="middle" fill="#888888" font-family="Arial, sans-serif" font-size="14">
+    Prediction Market Platform
+  </text>
+  
+  <!-- Decorative elements -->
+  <circle cx="60" cy="60" r="8" fill="#3b82f6" opacity="0.7"/>
+  <circle cx="340" cy="60" r="8" fill="#3b82f6" opacity="0.7"/>
+  <rect x="50" y="55" width="20" height="10" rx="5" fill="#3b82f6" opacity="0.5"/>
+  <rect x="330" y="55" width="20" height="10" rx="5" fill="#3b82f6" opacity="0.5"/>
+</svg>
