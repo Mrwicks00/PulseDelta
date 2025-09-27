@@ -133,16 +133,6 @@ export function useTrading() {
         const totalCost = cost + fee;
         const totalCostWei = BigInt(Math.floor(totalCost * 1e18));
 
-        // Check if user has enough BDAG balance
-        const balance = bDAGBalance?.value || BigInt(0);
-        if (balance < totalCostWei) {
-          throw new Error(
-            `Insufficient BDAG balance. Need ${formatPrice(
-              totalCost
-            )} but have ${formatPrice(Number(balance) / 1e18)}`
-          );
-        }
-
         console.log("Executing trade:", {
           market: market.address,
           type: market.type,
@@ -152,25 +142,20 @@ export function useTrading() {
           totalCostWei: totalCostWei.toString(),
         });
 
-        toast.info("Converting BDAG to wDAG...");
+        const wDAGAddress = CONTRACT_ADDRESSES.wDAG;
+        const wDAGAbi = ABI.wDAG;
 
-        // Step 1: Convert BDAG to wDAG by calling deposit() on wDAG contract
-        const wDAGAddress = CONTRACT_ADDRESSES.wDAG; // Use the correct wDAG address
-        const wDAGAbi = ABI.wDAG; // Use the full wDAG ABI
-
-        // Convert BDAG to wDAG
-        const depositTxHash = await writeContractAsync({
+        // Step 1: Check current wDAG balance
+        const wDAGBalance = await readContract(config, {
           address: wDAGAddress as `0x${string}`,
           abi: wDAGAbi,
-          functionName: "deposit",
-          value: totalCostWei, // Send BDAG as value to get wDAG
+          functionName: "balanceOf",
+          args: [address],
         });
 
-        console.log("Deposit transaction submitted:", depositTxHash);
-        await waitForTransactionReceipt(config, { hash: depositTxHash });
-        console.log("BDAG converted to wDAG");
+        console.log("Current wDAG balance:", Number(wDAGBalance) / 1e18, "wDAG");
 
-        // Step 2: Check current allowance and approve if needed
+        // Step 2: Check current allowance
         const currentAllowance = await readContract(config, {
           address: wDAGAddress as `0x${string}`,
           abi: wDAGAbi,
@@ -178,13 +163,39 @@ export function useTrading() {
           args: [address, market.address],
         });
 
-        console.log(
-          "Current allowance:",
-          Number(currentAllowance) / 1e18,
-          "wDAG"
-        );
+        console.log("Current allowance:", Number(currentAllowance) / 1e18, "wDAG");
         console.log("Required amount:", totalCost, "wDAG");
 
+        // Step 3: Convert BDAG to wDAG only if needed
+        if ((wDAGBalance as bigint) < totalCostWei) {
+          const neededAmount = totalCostWei - (wDAGBalance as bigint);
+          const bDAGBalance = bDAGBalance?.value || BigInt(0);
+          
+          if (bDAGBalance < neededAmount) {
+            throw new Error(
+              `Insufficient BDAG balance. Need ${formatPrice(
+                Number(neededAmount) / 1e18
+              )} BDAG to convert to wDAG but have ${formatPrice(Number(bDAGBalance) / 1e18)}`
+            );
+          }
+
+          toast.info("Converting BDAG to wDAG...");
+
+          const depositTxHash = await writeContractAsync({
+            address: wDAGAddress as `0x${string}`,
+            abi: wDAGAbi,
+            functionName: "deposit",
+            value: neededAmount,
+          });
+
+          console.log("Deposit transaction submitted:", depositTxHash);
+          await waitForTransactionReceipt(config, { hash: depositTxHash });
+          console.log("BDAG converted to wDAG");
+        } else {
+          console.log("Sufficient wDAG balance, skipping conversion");
+        }
+
+        // Step 4: Approve only if needed
         if ((currentAllowance as bigint) < totalCostWei) {
           toast.info("Approving market to spend wDAG...");
 
@@ -204,7 +215,7 @@ export function useTrading() {
 
         toast.info("Executing trade...");
 
-        // Step 3: Execute the buy transaction (no value needed, uses transferFrom)
+        // Step 5: Execute the buy transaction (no value needed, uses transferFrom)
         let txHash: `0x${string}`;
 
         if (market.type === "binary") {

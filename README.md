@@ -397,8 +397,8 @@ yarn start
 
 ### Phase 2: Enhanced Features 🚧
 
-- [ ] Multi-outcome markets
-- [ ] Scalar markets
+- [x] Multi-outcome markets
+- [x] Scalar markets
 - [ ] Advanced trading features
 - [ ] Mobile app
 - [ ] API documentation
